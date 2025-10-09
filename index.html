@@ -1,1 +1,223 @@
-Hello world
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="120">
+    <title>基金净值查询</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f9;
+            color: #333;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .fund-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .fund-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.2em;
+        }
+
+        p {
+            font-size: 1em;
+            margin: 8px 0;
+        }
+
+        .net-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .positive {
+            color: #e74c3c;
+        }
+
+        .negative {
+            color: #2ecc71;
+        }
+
+        .date {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="fund-container">
+        <h1>正在初始化...</h1>
+    </div>
+
+    <script>
+        const fundCodes = ["001717", "004854", "320007", "002083", "161725", "012734", "011036","012863","011803"];
+        const benchmarkValues = {
+            "001717": 3.477,
+            "320007": 1.486,
+            "002083": 1.514,
+            "004854": 1.777,
+	    "161725": 0.8367,
+		"012734":1.5882,
+		"011036":1.2323	
+        };
+        let currentFundIndex = 0;
+        let fundsData = []; // 存储所有基金数据用于排序
+
+        function setupCards() {
+            const container = document.getElementById('fund-container');
+            container.innerHTML = ''; // Clear initial message
+            container.innerHTML = '<h1>正在加载基金数据...</h1>';
+        }
+
+        function fetchNextFundData() {
+            if (currentFundIndex >= fundCodes.length) {
+                // 所有基金数据加载完成，按涨跌幅排序并显示
+                displaySortedFunds();
+                return;
+            }
+            const code = fundCodes[currentFundIndex];
+
+            // This API uses a fixed JSONP callback name: jsonpgz
+            // We define it globally and it gets overwritten for each request.
+            window.jsonpgz = (data) => {
+                // 将数据保存到数组中，而不是立即更新卡片
+                if (data && typeof data === 'object') {
+                    data.benchmarkValue = benchmarkValues[data.fundcode];
+                    fundsData.push(data);
+                } else {
+                    fundsData.push({
+                        fundcode: code,
+                        name: code,
+                        gsz: '0',
+                        gszzl: '0',
+                        gztime: '数据无效',
+                        error: true
+                    });
+                }
+                // The script tag is removed in the 'finally' block
+            };
+
+            const script = document.createElement('script');
+            script.src = `https://fundgz.1234567.com.cn/js/${code}.js?_=${new Date().getTime()}`;
+
+            const cleanup = () => {
+                if (script.parentNode) {
+                    document.body.removeChild(script);
+                }
+                delete window.jsonpgz;
+                currentFundIndex++;
+                fetchNextFundData(); // Fetch the next fund
+            }
+
+            script.onload = cleanup;
+            script.onerror = () => {
+                // 添加错误数据占位
+                fundsData.push({
+                    fundcode: code,
+                    name: code,
+                    gsz: '0',
+                    gszzl: '0',
+                    gztime: '加载失败',
+                    error: true
+                });
+                cleanup();
+            };
+
+            document.body.appendChild(script);
+        }
+
+        function createCardHTML(data) {
+            if (!data || data.error) {
+                return `
+                <div class="fund-card">
+                    <h1>${data?.name || '未知基金'}</h1>
+                    <p>数据加载失败</p>
+                </div>
+            `;
+            }
+
+            const name = data.name;
+            const code = data.fundcode;
+            const estimatedValue = data.gsz;
+            const estimatedChange = parseFloat(data.gszzl);
+            const updateTime = data.gztime;
+            const benchmarkValue = data.benchmarkValue;
+
+            const changeColorClass = estimatedChange >= 0 ? 'positive' : 'negative';
+            const sign = estimatedChange >= 0 ? '+' : '';
+            const displayValue = isNaN(estimatedValue) ? '暂无数据' : estimatedValue;
+            const displayChange = isNaN(estimatedChange) ? '暂无数据' : `${sign}${estimatedChange.toFixed(2)}%`;
+
+            return `
+            <div class="fund-card">
+                <h1>
+                    <a href="https://fund.eastmoney.com/${code}.html" target="_blank" style="text-decoration: none; color: inherit;">
+                        ${name || '未知基金'} (${code})
+                    </a>
+                </h1>
+                <p>最新估算净值</p>
+                <div class="net-value ${changeColorClass}">${displayValue}</div>
+                <p>估算涨跌幅: <span class="${changeColorClass}">${displayChange}</span></p>
+                <p>8-14基准值: ${benchmarkValue}</p>
+                <p class="date">更新时间: ${updateTime || '暂无更新'}</p>
+            </div>
+        `;
+        }
+
+        function displaySortedFunds() {
+            // 添加最后更新时间
+            const now = new Date();
+            const updateTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+            // 按估算涨跌幅排序（从高到低）
+            fundsData.sort((a, b) => {
+                if (!a || !b) return 0;
+                const changeA = (a.error || !a.gszzl) ? -Infinity : parseFloat(a.gszzl);
+                const changeB = (b.error || !b.gszzl) ? -Infinity : parseFloat(b.gszzl);
+                return changeB - changeA; // 降序排列
+            });
+
+            // 更新DOM
+            const container = document.getElementById('fund-container');
+            container.innerHTML = ''; // 清空容器
+
+            // 添加排序后的基金卡片
+            const cardsHTML = fundsData.map(data => createCardHTML(data)).join('');
+            container.innerHTML = cardsHTML;
+        }
+
+        // Start the process
+        setupCards();
+        fetchNextFundData();
+    </script>
+
+</body>
+
+</html>
