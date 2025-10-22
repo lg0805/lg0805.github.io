@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>易企业 - 中秋佳节</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 首页 -->
+    <div id="home-page" class="page active">
+        <header class="header">
+            <div class="logo">易企业</div>
+            <div class="festival-greeting">中秋佳节快乐</div>
+        </header>
+
+        <main class="main-content">
+            <section class="hero-section">
+                <div class="moon-bg">
+                    <div class="moon"></div>
+                </div>
+                <h1 class="hero-title">花好月圆夜</h1>
+                <p class="hero-subtitle">与您共赏中秋明月，共享团圆时光</p>
+            </section>
+
+            <section class="feature-cards">
+                <div class="card">
+                    <div class="card-icon">🥮</div>
+                    <h3>月饼礼盒</h3>
+                    <p>精选传统口味，传承经典味道</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🌕</div>
+                    <h3>赏月活动</h3>
+                    <p>公司团建赏月，增进员工感情</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🏮</div>
+                    <h3>节日福利</h3>
+                    <p>丰厚节日奖金，感谢辛勤付出</p>
+                </div>
+            </section>
+
+            <section class="announcement">
+                <h2>🎊 中秋节放假通知</h2>
+                <div class="notice-content">
+                    <p>根据国家节假日安排，中秋节放假时间为：</p>
+                    <p class="highlight">9月29日至10月1日，共3天</p>
+                    <p>祝全体员工中秋节快乐，阖家团圆！</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 活动页面 -->
+    <div id="activities-page" class="page">
+        <header class="header">
+            <button class="back-btn" onclick="showPage('home')">←</button>
+            <div class="title">中秋活动</div>
+        </header>
+
+        <main class="main-content">
+            <section class="activity-banner">
+                <div class="banner-content">
+                    <h1>中秋嘉年华</h1>
+                    <p>精彩活动等您参与</p>
+                </div>
+            </section>
+
+            <section class="activity-list">
+                <div class="activity-item">
+                    <div class="activity-time">9月28日 19:00</div>
+                    <div class="activity-content">
+                        <h3>🌙 中秋诗词朗诵比赛</h3>
+                        <p>诵读经典诗词，感受传统文化魅力</p>
+                        <div class="activity-location">📍 公司大礼堂</div>
+                        <button class="join-btn">立即报名</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-time">9月29日 14:00</div>
+                    <div class="activity-content">
+                        <h3>🥮 月饼制作体验</h3>
+                        <p>亲手制作传统月饼，体验制作乐趣</p>
+                        <div class="activity-location">📍 员工餐厅</div>
+                        <button class="join-btn">立即报名</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-time">9月29日 20:00</div>
+                    <div class="activity-content">
+                        <h3>🏮 中秋晚会</h3>
+                        <p>歌舞表演，抽奖活动，共度中秋佳节</p>
+                        <div class="activity-location">📍 户外广场</div>
+                        <button class="join-btn">立即报名</button>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-time">9月30日 10:00</div>
+                    <div class="activity-content">
+                        <h3>🎯 趣味游戏</h3>
+                        <p>猜灯谜、套圈圈等传统游戏</p>
+                        <div class="activity-location">📍 公司花园</div>
+                        <button class="join-btn">立即报名</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 个人中心页面 -->
+    <div id="profile-page" class="page">
+        <header class="header">
+            <button class="back-btn" onclick="showPage('home')">←</button>
+            <div class="title">个人中心</div>
+        </header>
+
+        <main class="main-content">
+            <section class="profile-header">
+                <div class="avatar">👤</div>
+                <div class="user-info">
+                    <h2>张三</h2>
+                    <p>产品经理 · 技术部</p>
+                </div>
+                <div class="festival-badge">中秋快乐</div>
+            </section>
+
+            <section class="menu-section">
+                <div class="menu-group">
+                    <h3>中秋专区</h3>
+                    <div class="menu-item">
+                        <span class="menu-icon">🥮</span>
+                        <span class="menu-text">我的月饼礼盒</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                    <div class="menu-item">
+                        <span class="menu-icon">🎫</span>
+                        <span class="menu-text">活动报名记录</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                    <div class="menu-item">
+                        <span class="menu-icon">🏆</span>
+                        <span class="menu-text">中秋积分兑换</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <h3>常用功能</h3>
+                    <div class="menu-item">
+                        <span class="menu-icon">📅</span>
+                        <span class="menu-text">我的日程</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                    <div class="menu-item">
+                        <span class="menu-icon">💰</span>
+                        <span class="menu-text">薪资查询</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                    <div class="menu-item">
+                        <span class="menu-icon">📋</span>
+                        <span class="menu-text">请假申请</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                    <div class="menu-item">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">系统设置</span>
+                        <span class="menu-arrow">></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="stats-section">
+                <h3>本月数据</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">22</div>
+                        <div class="stat-label">工作天数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">参与活动</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">580</div>
+                        <div class="stat-label">积分余额</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="showPage('home')">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-text">首页</span>
+        </button>
+        <button class="nav-item" onclick="showPage('activities')">
+            <span class="nav-icon">🎯</span>
+            <span class="nav-text">活动</span>
+        </button>
+        <button class="nav-item" onclick="showPage('profile')">
+            <span class="nav-icon">👤</span>
+            <span class="nav-text">我的</span>
+        </button>
+    </nav>
+
+    <script src="script.js"></script>
+</body>
+</html>
