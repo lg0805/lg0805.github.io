@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单轮播图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .carousel {
+            width: 600px;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .carousel-item {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+        }
+
+        .carousel-item.active {
+            opacity: 1;
+        }
+
+        /* 左右按钮 */
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            z-index: 10;
+        }
+
+        .carousel-btn:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .carousel-btn.prev {
+            left: 10px;
+        }
+
+        .carousel-btn.next {
+            right: 10px;
+        }
+
+        /* 指示点 */
+        .carousel-indicators {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .indicator.active {
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="carousel">
+        <!-- 轮播图片 -->
+        <div class="carousel-item active" style="background-image: url('https://picsum.photos/600/400?random=1');">
+        </div>
+        <div class="carousel-item" style="background-image: url('https://picsum.photos/600/400?random=2');"></div>
+        <div class="carousel-item" style="background-image: url('https://picsum.photos/600/400?random=3');"></div>
+        <div class="carousel-item" style="background-image: url('https://picsum.photos/600/400?random=4');"></div>
+
+        <!-- 左右按钮 -->
+        <button class="carousel-btn prev">❮</button>
+        <button class="carousel-btn next">❯</button>
+
+        <!-- 指示点 -->
+        <div class="carousel-indicators">
+            <span class="indicator active"></span>
+            <span class="indicator"></span>
+            <span class="indicator"></span>
+            <span class="indicator"></span>
+        </div>
+    </div>
+
+    <script>
+        // 轮播图配置
+        const carousel = document.querySelector('.carousel');
+        const items = document.querySelectorAll('.carousel-item');
+        const prevBtn = document.querySelector('.carousel-btn.prev');
+        const nextBtn = document.querySelector('.carousel-btn.next');
+        const indicators = document.querySelectorAll('.indicator');
+
+        let currentIndex = 0;
+        let autoPlayTimer = null;
+
+        // 切换到指定索引
+        function goToSlide(index) {
+            // 移除所有 active 类
+            items.forEach(item => item.classList.remove('active'));
+            indicators.forEach(indicator => indicator.classList.remove('active'));
+
+            // 添加 active 类到当前项
+            items[index].classList.add('active');
+            indicators[index].classList.add('active');
+
+            currentIndex = index;
+        }
+
+        // 下一张
+        function nextSlide() {
+            const nextIndex = (currentIndex + 1) % items.length;
+            goToSlide(nextIndex);
+        }
+
+        // 上一张
+        function prevSlide() {
+            const prevIndex = (currentIndex - 1 + items.length) % items.length;
+            goToSlide(prevIndex);
+        }
+
+        // 自动播放
+        function startAutoPlay() {
+            autoPlayTimer = setInterval(nextSlide, 4000); // 4秒切换一次
+        }
+
+        // 停止自动播放
+        function stopAutoPlay() {
+            clearInterval(autoPlayTimer);
+        }
+
+        // 重新开始自动播放
+        function resetAutoPlay() {
+            stopAutoPlay();
+            startAutoPlay();
+        }
+
+        // 事件监听
+        prevBtn.addEventListener('click', () => {
+            prevSlide();
+            resetAutoPlay();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            nextSlide();
+            resetAutoPlay();
+        });
+
+        // 指示点点击
+        indicators.forEach((indicator, index) => {
+            indicator.addEventListener('click', () => {
+                goToSlide(index);
+                resetAutoPlay();
+            });
+        });
+
+        // 鼠标悬停暂停，离开继续
+        carousel.addEventListener('mouseenter', stopAutoPlay);
+        carousel.addEventListener('mouseleave', startAutoPlay);
+
+        // 初始化自动播放
+        startAutoPlay();
+    </script>
+</body>
+
+</html>
