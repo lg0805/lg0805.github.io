@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -54,11 +53,11 @@
         }
 
         .positive {
-            color: #e74c3c;
+            color: #e74c3c; /* 红色表示上涨 */
         }
 
         .negative {
-            color: #2ecc71;
+            color: #2ecc71; /* 绿色表示下跌 */
         }
 
         .date {
@@ -66,35 +65,58 @@
             color: #7f8c8d;
             margin-top: 15px;
         }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .update-time {
+            text-align: center;
+            margin: 10px 0;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 
 <body>
-
+    <h1 class="page-header">基金净值实时查询</h1>
+    <div class="update-time" id="page-update-time"></div>
     <div class="container" id="fund-container">
         <h1>正在初始化...</h1>
     </div>
 
     <script>
+        // 基金代码列表
         let fundCodes = ["001717", "004854", "320007", "002083", "161725", "012734", "011036","012863","011803","000217"];
+        
+        // 基准值配置（补充所有基金的基准值，没有的设为null）
         let benchmarkValues = {
             "001717": 3.477,
             "320007": 1.486,
             "002083": 1.514,
             "004854": 1.777,
-	    "161725": 0.8367,
-		"012734":1.5882,
-		"011036":1.2323	
+            "161725": 0.8367,
+            "012734": 1.5882,
+            "011036": 1.2323,
+            "012863": null,
+            "011803": null,
+            "000217": null
         };
+        
         let currentFundIndex = 0;
         let fundsData = []; // 存储所有基金数据用于排序
 
+        // 初始化卡片容器
         function setupCards() {
             const container = document.getElementById('fund-container');
-            container。innerHTML = ''; // Clear initial message
+            // 修复了中文句号错误：container。innerHTML → container.innerHTML
             container.innerHTML = '<h1>正在加载基金数据...</h1>';
         }
 
+        // 逐个获取基金数据
         function fetchNextFundData() {
             if (currentFundIndex >= fundCodes.length) {
                 // 所有基金数据加载完成，按涨跌幅排序并显示
@@ -103,44 +125,44 @@
             }
             const code = fundCodes[currentFundIndex];
 
-            // This API uses a fixed JSONP callback name: jsonpgz
-            // We define it globally and it gets overwritten for each request.
+            // 定义JSONP回调函数（全局）
             window.jsonpgz = (data) => {
-                // 将数据保存到数组中，而不是立即更新卡片
-                if (data && typeof data === 'object') {
+                // 将数据保存到数组中
+                if (data && typeof data === 'object' && data.fundcode) {
                     data.benchmarkValue = benchmarkValues[data.fundcode];
                     fundsData.push(data);
                 } else {
                     fundsData.push({
                         fundcode: code,
-                        name: code,
+                        name: `基金(${code})`,
                         gsz: '0',
                         gszzl: '0',
                         gztime: '数据无效',
                         error: true
                     });
                 }
-                // The script tag is removed in the 'finally' block
             };
 
+            // 创建script标签请求数据
             const script = document.createElement('script');
             script.src = `https://fundgz.1234567.com.cn/js/${code}.js?_=${new Date().getTime()}`;
 
+            // 清理函数
             const cleanup = () => {
                 if (script.parentNode) {
                     document.body.removeChild(script);
                 }
                 delete window.jsonpgz;
                 currentFundIndex++;
-                fetchNextFundData(); // Fetch the next fund
+                fetchNextFundData(); // 获取下一个基金
             }
 
             script.onload = cleanup;
             script.onerror = () => {
-                // 添加错误数据占位
+                // 加载失败时添加占位数据
                 fundsData.push({
                     fundcode: code,
-                    name: code,
+                    name: `基金(${code})`,
                     gsz: '0',
                     gszzl: '0',
                     gztime: '加载失败',
@@ -152,67 +174,77 @@
             document.body.appendChild(script);
         }
 
+        // 创建单只基金的卡片HTML
         function createCardHTML(data) {
             if (!data || data.error) {
                 return `
                 <div class="fund-card">
                     <h1>${data?.name || '未知基金'}</h1>
-                    <p>数据加载失败</p>
+                    <p class="negative">数据加载失败</p>
+                    <p class="date">请稍后刷新页面</p>
                 </div>
             `;
             }
 
-            const name = data.name;
+            const name = data.name || `基金(${data.fundcode})`;
             const code = data.fundcode;
             const estimatedValue = data.gsz;
             const estimatedChange = parseFloat(data.gszzl);
             const updateTime = data.gztime;
             const benchmarkValue = data.benchmarkValue;
 
+            // 涨跌幅样式类
             const changeColorClass = estimatedChange >= 0 ? 'positive' : 'negative';
             const sign = estimatedChange >= 0 ? '+' : '';
-            const displayValue = isNaN(estimatedValue) ? '暂无数据' : estimatedValue;
+            
+            // 格式化显示数据
+            const displayValue = isNaN(parseFloat(estimatedValue)) ? '暂无数据' : parseFloat(estimatedValue).toFixed(4);
             const displayChange = isNaN(estimatedChange) ? '暂无数据' : `${sign}${estimatedChange.toFixed(2)}%`;
+            const displayBenchmark = benchmarkValue !== null ? benchmarkValue.toFixed(4) : '暂无基准';
 
             return `
             <div class="fund-card">
                 <h1>
                     <a href="https://fund.eastmoney.com/${code}.html" target="_blank" style="text-decoration: none; color: inherit;">
-                        ${name || '未知基金'} (${code})
+                        ${name} (${code})
                     </a>
                 </h1>
                 <p>最新估算净值</p>
                 <div class="net-value ${changeColorClass}">${displayValue}</div>
                 <p>估算涨跌幅: <span class="${changeColorClass}">${displayChange}</span></p>
-                <p>8-14基准值: ${benchmarkValue}</p>
+                <p>8-14基准值: ${displayBenchmark}</p>
                 <p class="date">更新时间: ${updateTime || '暂无更新'}</p>
             </div>
         `;
         }
 
+        // 排序并显示所有基金卡片
         function displaySortedFunds() {
-            // 添加最后更新时间
+            // 设置页面更新时间
             const now = new Date();
-            const updateTimeStr = `${当前.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const updateTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            document.getElementById('page-update-time').textContent = `页面最后更新时间：${now.toLocaleDateString()} ${updateTimeStr}`;
 
-            // 按估算涨跌幅排序（从高到低）
+            // 按估算涨跌幅降序排序（加载失败的排最后）
             fundsData.sort((a, b) => {
-                if (!a || !b) return 0;
-                const changeA = (a.error || !a.gszzl) ? -Infinity : parseFloat(a.gszzl);
-                const changeB = (b.error || !b.gszzl) ? -Infinity : parseFloat(b.gszzl);
+                if (a.error) return 1;
+                if (b.error) return -1;
+                
+                const changeA = parseFloat(a.gszzl) || -Infinity;
+                const changeB = parseFloat(b.gszzl) || -Infinity;
                 return changeB - changeA; // 降序排列
             });
 
-            // 更新DOM
+            // 更新DOM显示所有卡片
             const container = document.getElementById('fund-container');
             container.innerHTML = ''; // 清空容器
 
-            // 添加排序后的基金卡片
+            // 生成所有卡片的HTML
             const cardsHTML = fundsData.map(data => createCardHTML(data)).join('');
             container.innerHTML = cardsHTML;
         }
 
-        // Start the process
+        // 启动流程
         setupCards();
         fetchNextFundData();
     </script>
