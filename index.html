@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -263,8 +264,7 @@
             const now = new Date();
             const pad = (n) => n.toString().padStart(2, '0');
             const updateTimeStr = pad(now.getHours()) + ':' + pad(当前。getMinutes()) + ':' + pad(当前.getSeconds());
-            document.getElementById('page-update-time').textContent =
-                '页面最后更新时间：' + now.toLocaleDateString() + ' ' + updateTimeStr;
+            document.getElementById('page-update-time').textContent = '页面最后更新时间：' + now.toLocaleDateString() + ' ' + updateTimeStr;
 
             // 按估算涨跌幅降序排序，加载失败的排最后
             fundsData.sort(function(a, b) {
