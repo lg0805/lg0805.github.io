@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="120">
     <title>基金净值查询</title>
     <style>
         body {
@@ -78,63 +77,95 @@
             color: #7f8c8d;
             font-size: 0.9em;
         }
+
+        .refresh-btn {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 8px 24px;
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background-color: #3d5166;
+        }
     </style>
 </head>
 
 <body>
     <h1 class="page-header">基金净值实时查询</h1>
     <div class="update-time" id="page-update-time"></div>
+    <button class="refresh-btn" id="refresh-btn" onclick="startFetching()">手动刷新</button>
     <div class="container" id="fund-container">
         <h1>正在初始化...</h1>
     </div>
 
     <script>
         // 基金代码列表
-        let fundCodes = ["001717", "004854", "320007", "002083", "161725", "012734", "011036","012863","011803","000217"];
-        
-        // 基准值配置（补充所有基金的基准值，没有的设为null）
-        let benchmarkValues = {
+        const fundCodes = ["001717", "004854", "320007", "002083", "024749", "012734", "011036", "012863", "011803", "000217"];
+
+        // 基准值配置（没有基准值的设为 null）
+        const benchmarkValues = {
             "001717": 3.477,
             "320007": 1.486,
             "002083": 1.514,
             "004854": 1.777,
-            "161725": 0.8367,
+            "161725": null,       // 修复：原来被注释导致取值为 undefined，改为显式 null
             "012734": 1.5882,
             "011036": 1.2323,
             "012863": null,
             "011803": null,
             "000217": null
         };
-        
+
         let currentFundIndex = 0;
-        let fundsData = []; // 存储所有基金数据用于排序
+        let fundsData = [];
+        let autoRefreshTimer = null;
+
+        // 修复：将初始化逻辑封装，确保每次启动前重置状态，避免重复数据叠加
+        function startFetching() {
+            currentFundIndex = 0;
+            fundsData = [];
+            setupCards();
+            fetchNextFundData();
+
+            // 每 120 秒自动刷新一次（替代 meta refresh，避免整页重载）
+            if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+            autoRefreshTimer = setInterval(startFetching, 120 * 1000);
+        }
 
         // 初始化卡片容器
         function setupCards() {
             const container = document.getElementById('fund-container');
-            // 修复了中文句号错误：container。innerHTML → container.innerHTML
             container.innerHTML = '<h1>正在加载基金数据...</h1>';
         }
 
-        // 逐个获取基金数据
+        // 逐个获取基金数据（串行 JSONP）
         function fetchNextFundData() {
             if (currentFundIndex >= fundCodes.length) {
-                // 所有基金数据加载完成，按涨跌幅排序并显示
                 displaySortedFunds();
                 return;
             }
+
             const code = fundCodes[currentFundIndex];
 
-            // 定义JSONP回调函数（全局）
+            // 定义 JSONP 回调（全局）
             window.jsonpgz = (data) => {
-                // 将数据保存到数组中
                 if (data && typeof data === 'object' && data.fundcode) {
-                    data.benchmarkValue = benchmarkValues[data.fundcode];
+                    // 修复：使用 hasOwnProperty 判断，避免 undefined 与 null 混淆
+                    data.benchmarkValue = Object.prototype.hasOwnProperty.call(benchmarkValues, data.fundcode)
+                        ? benchmarkValues[data.fundcode]
+                        : null;
                     fundsData.push(data);
                 } else {
                     fundsData.push({
                         fundcode: code,
-                        name: `基金(${code})`,
+                        name: '基金(' + code + ')',
                         gsz: '0',
                         gszzl: '0',
                         gztime: '数据无效',
@@ -143,26 +174,37 @@
                 }
             };
 
-            // 创建script标签请求数据
             const script = document.createElement('script');
-            script.src = `https://fundgz.1234567.com.cn/js/${code}.js?_=${new Date().getTime()}`;
+            script.src = 'https://fundgz.1234567.com.cn/js/' + code + '.js?_=' + new Date().getTime();
 
-            // 清理函数
+            // 修复：添加超时保护，防止请求挂起导致后续基金无法加载
+            const timeout = setTimeout(function() {
+                fundsData.push({
+                    fundcode: code,
+                    name: '基金(' + code + ')',
+                    gsz: '0',
+                    gszzl: '0',
+                    gztime: '请求超时',
+                    error: true
+                });
+                cleanup();
+            }, 5000);
+
             const cleanup = () => {
+                clearTimeout(timeout);
                 if (script.parentNode) {
                     document.body.removeChild(script);
                 }
                 delete window.jsonpgz;
                 currentFundIndex++;
-                fetchNextFundData(); // 获取下一个基金
-            }
+                fetchNextFundData();
+            };
 
             script.onload = cleanup;
             script.onerror = () => {
-                // 加载失败时添加占位数据
                 fundsData.push({
                     fundcode: code,
-                    name: `基金(${code})`,
+                    name: '基金(' + code + ')',
                     gsz: '0',
                     gszzl: '0',
                     gztime: '加载失败',
@@ -174,79 +216,71 @@
             document.body.appendChild(script);
         }
 
-        // 创建单只基金的卡片HTML
+        // 创建单只基金的卡片 HTML
         function createCardHTML(data) {
             if (!data || data.error) {
-                return `
-                <div class="fund-card">
-                    <h1>${data?.name || '未知基金'}</h1>
-                    <p class="negative">数据加载失败</p>
-                    <p class="date">请稍后刷新页面</p>
-                </div>
-            `;
+                return '<div class="fund-card">'
+                    + '<h1>' + (data && data.name ? data.name : '未知基金') + '</h1>'
+                    + '<p class="negative">数据加载失败</p>'
+                    + '<p class="date">请稍后刷新页面</p>'
+                    + '</div>';
             }
 
-            const name = data.name || `基金(${data.fundcode})`;
+            const name = data.name || '基金(' + data.fundcode + ')';
             const code = data.fundcode;
             const estimatedValue = data.gsz;
             const estimatedChange = parseFloat(data.gszzl);
             const updateTime = data.gztime;
-            const benchmarkValue = data.benchmarkValue;
+            const benchmarkValue = data.benchmarkValue; // 始终为数字或 null
 
-            // 涨跌幅样式类
             const changeColorClass = estimatedChange >= 0 ? 'positive' : 'negative';
-            const sign = estimatedChange >= 0 ? '+' : '';
-            
-            // 格式化显示数据
-            const displayValue = isNaN(parseFloat(estimatedValue)) ? '暂无数据' : parseFloat(estimatedValue).toFixed(4);
-            const displayChange = isNaN(estimatedChange) ? '暂无数据' : `${sign}${estimatedChange.toFixed(2)}%`;
-            const displayBenchmark = benchmarkValue !== null ? benchmarkValue.toFixed(4) : '暂无基准';
+            // 修复：涨跌幅为 0 时不显示 + 号
+            const sign = estimatedChange > 0 ? '+' : '';
 
-            return `
-            <div class="fund-card">
-                <h1>
-                    <a href="https://fund.eastmoney.com/${code}.html" target="_blank" style="text-decoration: none; color: inherit;">
-                        ${name} (${code})
-                    </a>
-                </h1>
-                <p>最新估算净值</p>
-                <div class="net-value ${changeColorClass}">${displayValue}</div>
-                <p>估算涨跌幅: <span class="${changeColorClass}">${displayChange}</span></p>
-                <p>8-14基准值: ${displayBenchmark}</p>
-                <p class="date">更新时间: ${updateTime || '暂无更新'}</p>
-            </div>
-        `;
+            const displayValue = isNaN(parseFloat(estimatedValue)) ? '暂无数据' : parseFloat(estimatedValue).toFixed(4);
+            const displayChange = isNaN(estimatedChange) ? '暂无数据' : sign + estimatedChange.toFixed(2) + '%';
+            // 修复：benchmarkValue 严格判断 null，避免 undefined 调用 toFixed 报错
+            const displayBenchmark = benchmarkValue !== null && benchmarkValue !== undefined
+                ? benchmarkValue.toFixed(4)
+                : '暂无基准';
+
+            return '<div class="fund-card">'
+                + '<h1>'
+                + '<a href="https://fund.eastmoney.com/' + code + '.html" target="_blank" style="text-decoration: none; color: inherit;">'
+                + name + ' (' + code + ')'
+                + '</a>'
+                + '</h1>'
+                + '<p>最新估算净值</p>'
+                + '<div class="net-value ' + changeColorClass + '">' + displayValue + '</div>'
+                + '<p>估算涨跌幅: <span class="' + changeColorClass + '">' + displayChange + '</span></p>'
+                + '<p>8-14基准值: ' + displayBenchmark + '</p>'
+                + '<p class="date">更新时间: ' + (updateTime || '暂无更新') + '</p>'
+                + '</div>';
         }
 
         // 排序并显示所有基金卡片
         function displaySortedFunds() {
-            // 设置页面更新时间
             const now = new Date();
-            const updateTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            document.getElementById('page-update-time').textContent = `页面最后更新时间：${now.toLocaleDateString()} ${updateTimeStr}`;
+            const pad = (n) => n.toString().padStart(2, '0');
+            const updateTimeStr = pad(now.getHours()) + ':' + pad(当前。getMinutes()) + ':' + pad(当前.getSeconds());
+            document.getElementById('page-update-time').textContent =
+                '页面最后更新时间：' + now.toLocaleDateString() + ' ' + updateTimeStr;
 
-            // 按估算涨跌幅降序排序（加载失败的排最后）
-            fundsData.sort((a, b) => {
+            // 按估算涨跌幅降序排序，加载失败的排最后
+            fundsData.sort(function(a, b) {
                 if (a.error) return 1;
                 if (b.error) return -1;
-                
-                const changeA = parseFloat(a.gszzl) || -Infinity;
-                const changeB = parseFloat(b.gszzl) || -Infinity;
-                return changeB - changeA; // 降序排列
+                const changeA = parseFloat(a.gszzl);
+                const changeB = parseFloat(b.gszzl);
+                return (isNaN(changeB) ? -Infinity : changeB) - (isNaN(changeA) ? -Infinity : changeA);
             });
 
-            // 更新DOM显示所有卡片
             const container = document.getElementById('fund-container');
-            container.innerHTML = ''; // 清空容器
-
-            // 生成所有卡片的HTML
-            const cardsHTML = fundsData.map(data => createCardHTML(data)).join('');
-            container.innerHTML = cardsHTML;
+            container.innerHTML = fundsData.map(createCardHTML).join('');
         }
 
-        // 启动流程
-        setupCards();
-        fetchNextFundData();
+        // 页面加载后启动
+        startFetching();
     </script>
 
 </body>
