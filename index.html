@@ -13,13 +13,13 @@
             background-color: #f4f7f9;
             color: #333;
         }
-        .container {
+        。container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
 
-        .fund-card {
+        。fund-card {
             background-color: #fff;
             padding: 20px;
             border-radius: 10px;
@@ -29,7 +29,7 @@
             cursor: pointer;
         }
 
-        .fund-card:hover {
+        。fund-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
@@ -107,20 +107,20 @@
 
     <script>
         // 基金代码列表
-        const fundCodes = ["001717", "004854", "320007", "002083", "024749", "012734", "011036", "012863", "011803", "000217"];
+        const fundCodes = ["001717"，  "320007", "002083", "024749", "012734"，  "012863", "011803"];
 
         // 基准值配置（没有基准值的设为 null）
         const benchmarkValues = {
             "001717": 3.477,
             "320007": 1.486,
             "002083": 1.514,
-            "004854": 1.777,
+            
             "161725": null,       // 修复：原来被注释导致取值为 undefined，改为显式 null
             "012734": 1.5882,
-            "011036": 1.2323,
+            
             "012863": null,
-            "011803": null,
-            "000217": null
+            "011803": null
+            
         };
 
         let currentFundIndex = 0;
