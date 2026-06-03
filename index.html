@@ -13,13 +13,13 @@
             background-color: #f4f7f9;
             color: #333;
         }
-        。container {
+        .container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
 
-        。fund-card {
+        .fund-card {
             background-color: #fff;
             padding: 20px;
             border-radius: 10px;
@@ -29,7 +29,7 @@
             cursor: pointer;
         }
 
-        。fund-card:hover {
+        .fund-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
@@ -106,60 +106,71 @@
     </div>
 
     <script>
-        // 基金代码列表
-        const fundCodes = ["001717"，  "320007", "002083", "024749", "012734"，  "012863", "011803"];
+        // 基金代码列表 - 修复：将所有中文逗号改为英文逗号
+        const fundCodes = ["001717", "320007", "002083", "024749", "012734", "012863", "011803"];
 
         // 基准值配置（没有基准值的设为 null）
         const benchmarkValues = {
             "001717": 3.477,
             "320007": 1.486,
             "002083": 1.514,
-            
-            "161725": null,       // 修复：原来被注释导致取值为 undefined，改为显式 null
+            "024749": null,    // 添加缺失的基金代码
             "012734": 1.5882,
-            
             "012863": null,
             "011803": null
-            
         };
 
         let currentFundIndex = 0;
         let fundsData = [];
         let autoRefreshTimer = null;
+        let isLoading = false;  // 添加加载状态锁，防止重复请求
 
         // 修复：将初始化逻辑封装，确保每次启动前重置状态，避免重复数据叠加
         function startFetching() {
+            // 防止在加载过程中重复调用
+            if (isLoading) return;
+            
+            isLoading = true;
+            
+            // 清除之前的定时器
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+            
             currentFundIndex = 0;
             fundsData = [];
             setupCards();
             fetchNextFundData();
 
             // 每 120 秒自动刷新一次（替代 meta refresh，避免整页重载）
-            if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-            autoRefreshTimer = setInterval(startFetching, 120 * 1000);
+            autoRefreshTimer = setInterval(function() {
+                startFetching();
+            }, 120 * 1000);
         }
 
         // 初始化卡片容器
         function setupCards() {
             const container = document.getElementById('fund-container');
-            container.innerHTML = '<h1>正在加载基金数据...</h1>';
+            container.innerHTML = '<div style="text-align:center; padding:40px;">正在加载基金数据...</div>';
         }
 
         // 逐个获取基金数据（串行 JSONP）
         function fetchNextFundData() {
             if (currentFundIndex >= fundCodes.length) {
                 displaySortedFunds();
+                isLoading = false;  // 加载完成，释放锁
                 return;
             }
 
             const code = fundCodes[currentFundIndex];
 
             // 定义 JSONP 回调（全局）
-            window.jsonpgz = (data) => {
+            window.jsonpgz = function(data) {
                 if (data && typeof data === 'object' && data.fundcode) {
                     // 修复：使用 hasOwnProperty 判断，避免 undefined 与 null 混淆
-                    data.benchmarkValue = Object.prototype.hasOwnProperty.call(benchmarkValues, data.fundcode)
-                        ? benchmarkValues[data.fundcode]
+                    data.benchmarkValue = benchmarkValues.hasOwnProperty(data.fundcode) 
+                        ? benchmarkValues[data.fundcode] 
                         : null;
                     fundsData.push(data);
                 } else {
@@ -179,6 +190,8 @@
 
             // 修复：添加超时保护，防止请求挂起导致后续基金无法加载
             const timeout = setTimeout(function() {
+                if (!window.jsonpgz) return; // 已经清理过了
+                
                 fundsData.push({
                     fundcode: code,
                     name: '基金(' + code + ')',
@@ -190,10 +203,14 @@
                 cleanup();
             }, 5000);
 
-            const cleanup = () => {
+            const cleanup = function() {
                 clearTimeout(timeout);
                 if (script.parentNode) {
-                    document.body.removeChild(script);
+                    try {
+                        document.body.removeChild(script);
+                    } catch(e) {
+                        // 忽略可能的移除错误
+                    }
                 }
                 delete window.jsonpgz;
                 currentFundIndex++;
@@ -201,7 +218,9 @@
             };
 
             script.onload = cleanup;
-            script.onerror = () => {
+            script.onerror = function() {
+                if (!window.jsonpgz) return; // 已经清理过了
+                
                 fundsData.push({
                     fundcode: code,
                     name: '基金(' + code + ')',
@@ -228,27 +247,29 @@
 
             const name = data.name || '基金(' + data.fundcode + ')';
             const code = data.fundcode;
-            const estimatedValue = data.gsz;
+            const estimatedValue = parseFloat(data.gsz);
             const estimatedChange = parseFloat(data.gszzl);
             const updateTime = data.gztime;
             const benchmarkValue = data.benchmarkValue; // 始终为数字或 null
 
-            const changeColorClass = estimatedChange >= 0 ? 'positive' : 'negative';
-            // 修复：涨跌幅为 0 时不显示 + 号
-            const sign = estimatedChange > 0 ? '+' : '';
+            // 修复：处理 NaN 和无效数据
+            const isValidValue = !isNaN(estimatedValue);
+            const isValidChange = !isNaN(estimatedChange);
+            
+            const changeColorClass = isValidChange && estimatedChange >= 0 ? 'positive' : 'negative';
+            const sign = isValidChange && estimatedChange > 0 ? '+' : '';
 
-            const displayValue = isNaN(parseFloat(estimatedValue)) ? '暂无数据' : parseFloat(estimatedValue).toFixed(4);
-            const displayChange = isNaN(estimatedChange) ? '暂无数据' : sign + estimatedChange.toFixed(2) + '%';
+            const displayValue = isValidValue ? estimatedValue.toFixed(4) : '暂无数据';
+            const displayChange = isValidChange ? sign + estimatedChange.toFixed(2) + '%' : '暂无数据';
+            
             // 修复：benchmarkValue 严格判断 null，避免 undefined 调用 toFixed 报错
-            const displayBenchmark = benchmarkValue !== null && benchmarkValue !== undefined
-                ? benchmarkValue.toFixed(4)
+            const displayBenchmark = (benchmarkValue !== null && benchmarkValue !== undefined && !isNaN(parseFloat(benchmarkValue)))
+                ? parseFloat(benchmarkValue).toFixed(4)
                 : '暂无基准';
 
-            return '<div class="fund-card">'
+            return '<div class="fund-card" onclick="window.open(\'https://fund.eastmoney.com/' + code + '.html\', \'_blank\')">'
                 + '<h1>'
-                + '<a href="https://fund.eastmoney.com/' + code + '.html" target="_blank" style="text-decoration: none; color: inherit;">'
                 + name + ' (' + code + ')'
-                + '</a>'
                 + '</h1>'
                 + '<p>最新估算净值</p>'
                 + '<div class="net-value ' + changeColorClass + '">' + displayValue + '</div>'
@@ -266,16 +287,19 @@
             document.getElementById('page-update-time').textContent = '页面最后更新时间：' + now.toLocaleDateString() + ' ' + updateTimeStr;
 
             // 按估算涨跌幅降序排序，加载失败的排最后
-            fundsData.sort(function(a, b) {
+            const sortedData = [...fundsData];
+            sortedData.sort(function(a, b) {
                 if (a.error) return 1;
                 if (b.error) return -1;
                 const changeA = parseFloat(a.gszzl);
                 const changeB = parseFloat(b.gszzl);
-                return (isNaN(changeB) ? -Infinity : changeB) - (isNaN(changeA) ? -Infinity : changeA);
+                if (isNaN(changeA)) return 1;
+                if (isNaN(changeB)) return -1;
+                return changeB - changeA;
             });
 
             const container = document.getElementById('fund-container');
-            container.innerHTML = fundsData.map(createCardHTML).join('');
+            container.innerHTML = sortedData.map(createCardHTML).join('');
         }
 
         // 页面加载后启动
