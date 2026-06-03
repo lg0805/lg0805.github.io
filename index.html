@@ -106,19 +106,8 @@
     </div>
 
     <script>
-        // 基金代码列表 - 修复：将所有中文逗号改为英文逗号
+        // 基金代码列表
         const fundCodes = ["001717", "320007", "002083", "024749", "012734", "012863", "011803"];
-
-        // 基准值配置（没有基准值的设为 null）
-        const benchmarkValues = {
-            "001717": 3.477,
-            "320007": 1.486,
-            "002083": 1.514,
-            "024749": null,    // 添加缺失的基金代码
-            "012734": 1.5882,
-            "012863": null,
-            "011803": null
-        };
 
         let currentFundIndex = 0;
         let fundsData = [];
@@ -168,10 +157,7 @@
             // 定义 JSONP 回调（全局）
             window.jsonpgz = function(data) {
                 if (data && typeof data === 'object' && data.fundcode) {
-                    // 修复：使用 hasOwnProperty 判断，避免 undefined 与 null 混淆
-                    data.benchmarkValue = benchmarkValues.hasOwnProperty(data.fundcode) 
-                        ? benchmarkValues[data.fundcode] 
-                        : null;
+                    // 去掉基准值配置，直接推送数据
                     fundsData.push(data);
                 } else {
                     fundsData.push({
@@ -250,7 +236,6 @@
             const estimatedValue = parseFloat(data.gsz);
             const estimatedChange = parseFloat(data.gszzl);
             const updateTime = data.gztime;
-            const benchmarkValue = data.benchmarkValue; // 始终为数字或 null
 
             // 修复：处理 NaN 和无效数据
             const isValidValue = !isNaN(estimatedValue);
@@ -261,11 +246,6 @@
 
             const displayValue = isValidValue ? estimatedValue.toFixed(4) : '暂无数据';
             const displayChange = isValidChange ? sign + estimatedChange.toFixed(2) + '%' : '暂无数据';
-            
-            // 修复：benchmarkValue 严格判断 null，避免 undefined 调用 toFixed 报错
-            const displayBenchmark = (benchmarkValue !== null && benchmarkValue !== undefined && !isNaN(parseFloat(benchmarkValue)))
-                ? parseFloat(benchmarkValue).toFixed(4)
-                : '暂无基准';
 
             return '<div class="fund-card" onclick="window.open(\'https://fund.eastmoney.com/' + code + '.html\', \'_blank\')">'
                 + '<h1>'
@@ -274,7 +254,6 @@
                 + '<p>最新估算净值</p>'
                 + '<div class="net-value ' + changeColorClass + '">' + displayValue + '</div>'
                 + '<p>估算涨跌幅: <span class="' + changeColorClass + '">' + displayChange + '</span></p>'
-                + '<p>8-14基准值: ' + displayBenchmark + '</p>'
                 + '<p class="date">更新时间: ' + (updateTime || '暂无更新') + '</p>'
                 + '</div>';
         }
